@@ -1,5 +1,5 @@
 import React from 'react'
-import aboutPortrait from '../assets/Img/dp.png'
+import aboutPortrait from '../assets/Img/he.png'
 const About = () => {
   const languages = [
     '✓ HTML5', '✓ CSS3', '✓ JavaScript',
