@@ -8,6 +8,7 @@ const Contact = () => {
     subject: '',
     message: '',
   })
+  const [submitStatus, setSubmitStatus] = useState('idle')
 
   const handleChange = (event) => {
     const { name, value } = event.target
@@ -21,12 +22,22 @@ const Contact = () => {
   const handleSubmit = (event) => {
     event.preventDefault()
 
-    const subject = encodeURIComponent(formData.subject || `Message from ${formData.name || 'your portfolio'}`)
-    const body = encodeURIComponent(
-      `Name: ${formData.name}\nEmail: ${formData.email}\n\n${formData.message}`
-    )
+    const submittedMessage = {
+      ...formData,
+      submittedAt: new Date().toISOString(),
+    }
 
-    window.location.href = `mailto:anis@aup.edu.pk?subject=${subject}&body=${body}`
+    const savedMessages = JSON.parse(localStorage.getItem('portfolio-contact-messages') || '[]')
+    savedMessages.push(submittedMessage)
+    localStorage.setItem('portfolio-contact-messages', JSON.stringify(savedMessages))
+
+    setSubmitStatus('success')
+    setFormData({
+      name: '',
+      email: '',
+      subject: '',
+      message: '',
+    })
   }
 
   return (
@@ -82,9 +93,15 @@ const Contact = () => {
               <div className='space-y-1 text-center sm:text-left'>
                 <h3 className='text-xl font-semibold text-white'>Send a message</h3>
                 <p className='text-sm leading-relaxed text-white/65'>
-                  I usually reply through email, so leave enough detail for a quick response.
+                  Send your message directly through this site and I’ll review it here.
                 </p>
               </div>
+
+              {submitStatus === 'success' && (
+                <div className='rounded-lg border border-cyan-400/30 bg-cyan-400/10 px-4 py-3 text-sm text-cyan-100'>
+                  Your message has been submitted successfully.
+                </div>
+              )}
 
               <div>
                 <label htmlFor='name' className='mb-2 block text-xs font-medium uppercase tracking-wide text-white/70 sm:text-sm sm:normal-case sm:tracking-normal'>
