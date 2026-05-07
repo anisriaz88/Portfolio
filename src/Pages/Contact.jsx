@@ -1,5 +1,6 @@
-import React, { useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import emailjs from '@emailjs/browser'
 
 const Contact = () => {
   const [formData, setFormData] = useState({
@@ -8,7 +9,22 @@ const Contact = () => {
     subject: '',
     message: '',
   })
-  const [submitStatus, setSubmitStatus] = useState('idle')
+  const [feedback, setFeedback] = useState(null)
+  const clearFeedbackTimeoutRef = useRef(null)
+
+  useEffect(() => {
+    const publicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY
+
+    if (publicKey) {
+      emailjs.init(publicKey)
+    }
+
+    return () => {
+      if (clearFeedbackTimeoutRef.current) {
+        window.clearTimeout(clearFeedbackTimeoutRef.current)
+      }
+    }
+  }, [])
 
   const handleChange = (event) => {
     const { name, value } = event.target
@@ -19,25 +35,54 @@ const Contact = () => {
     }))
   }
 
-  const handleSubmit = (event) => {
+  const handleSubmit = async (event) => {
     event.preventDefault()
 
-    const submittedMessage = {
-      ...formData,
-      submittedAt: new Date().toISOString(),
+    const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID
+    const templateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID
+    const receiverEmail = import.meta.env.VITE_CONTACT_RECEIVER_EMAIL || 'anis@aup.edu.pk'
+
+    if (!serviceId || !templateId || !import.meta.env.VITE_EMAILJS_PUBLIC_KEY) {
+      setFeedback({
+        type: 'error',
+        text: 'Email service is not configured yet. Add the EmailJS env values to enable inbox delivery.',
+      })
+      return
     }
 
-    const savedMessages = JSON.parse(localStorage.getItem('portfolio-contact-messages') || '[]')
-    savedMessages.push(submittedMessage)
-    localStorage.setItem('portfolio-contact-messages', JSON.stringify(savedMessages))
+    try {
+      if (clearFeedbackTimeoutRef.current) {
+        window.clearTimeout(clearFeedbackTimeoutRef.current)
+      }
 
-    setSubmitStatus('success')
-    setFormData({
-      name: '',
-      email: '',
-      subject: '',
-      message: '',
-    })
+      await emailjs.send(serviceId, templateId, {
+        from_name: formData.name,
+        from_email: formData.email,
+        subject: formData.subject || `Message from ${formData.name}`,
+        message: formData.message,
+        to_email: receiverEmail,
+      })
+
+      setFormData({
+        name: '',
+        email: '',
+        subject: '',
+        message: '',
+      })
+      setFeedback({
+        type: 'success',
+        text: 'Your message was sent to my inbox.',
+      })
+
+      clearFeedbackTimeoutRef.current = window.setTimeout(() => {
+        setFeedback(null)
+      }, 3000)
+    } catch {
+      setFeedback({
+        type: 'error',
+        text: 'Message could not be sent right now. Please try again.',
+      })
+    }
   }
 
   return (
@@ -93,13 +138,19 @@ const Contact = () => {
               <div className='space-y-1 text-center sm:text-left'>
                 <h3 className='text-xl font-semibold text-white'>Send a message</h3>
                 <p className='text-sm leading-relaxed text-white/65'>
-                  Send your message directly through this site and I’ll review it here.
+                  Send your message directly through this site and it will land in my inbox.
                 </p>
               </div>
 
-              {submitStatus === 'success' && (
-                <div className='rounded-lg border border-cyan-400/30 bg-cyan-400/10 px-4 py-3 text-sm text-cyan-100'>
-                  Your message has been submitted successfully.
+              {feedback && (
+                <div
+                  className={`rounded-lg px-4 py-3 text-sm ${
+                    feedback.type === 'success'
+                      ? 'border border-cyan-400/30 bg-cyan-400/10 text-cyan-100'
+                      : 'border border-rose-400/30 bg-rose-400/10 text-rose-100'
+                  }`}
+                >
+                  {feedback.text}
                 </div>
               )}
 
@@ -168,6 +219,7 @@ const Contact = () => {
 
               <button
                 type='submit'
+                disabled={feedback?.type === 'success'}
                 className='inline-flex w-full items-center justify-center rounded-lg bg-cyan-500 px-6 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-400 focus:outline-none focus:ring-2 focus:ring-cyan-300/60 sm:px-6'
               >
                 Send Message
