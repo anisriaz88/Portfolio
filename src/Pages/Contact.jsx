@@ -58,6 +58,7 @@ const Contact = () => {
       await emailjs.send(serviceId, templateId, {
         from_name: formData.name,
         from_email: formData.email,
+        reply_to: formData.email,
         subject: formData.subject || `Message from ${formData.name}`,
         message: formData.message,
         to_email: receiverEmail,
@@ -77,10 +78,10 @@ const Contact = () => {
       clearFeedbackTimeoutRef.current = window.setTimeout(() => {
         setFeedback(null)
       }, 3000)
-    } catch {
+    } catch (error) {
       setFeedback({
         type: 'error',
-        text: 'Message could not be sent right now. Please try again.',
+        text: error?.text || 'Message could not be sent right now. Please try again.',
       })
     }
   }
