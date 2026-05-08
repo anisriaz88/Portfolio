@@ -72,7 +72,7 @@ const Contact = () => {
       })
       setFeedback({
         type: 'success',
-        text: 'Your message was sent to my inbox.',
+        text: 'Your message sent to my inbox.',
       })
 
       clearFeedbackTimeoutRef.current = window.setTimeout(() => {
