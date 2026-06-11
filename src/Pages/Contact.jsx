@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
-import emailjs from '@emailjs/browser'
 
 const Contact = () => {
   const [formData, setFormData] = useState({
@@ -13,12 +12,6 @@ const Contact = () => {
   const clearFeedbackTimeoutRef = useRef(null)
 
   useEffect(() => {
-    const publicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY
-
-    if (publicKey) {
-      emailjs.init(publicKey)
-    }
-
     return () => {
       if (clearFeedbackTimeoutRef.current) {
         window.clearTimeout(clearFeedbackTimeoutRef.current)
@@ -38,31 +31,31 @@ const Contact = () => {
   const handleSubmit = async (event) => {
     event.preventDefault()
 
-    const serviceId = import.meta.env.VITE_EMAILJS_SERVICE_ID
-    const templateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID
     const receiverEmail = import.meta.env.VITE_CONTACT_RECEIVER_EMAIL || 'anis@aup.edu.pk'
-
-    if (!serviceId || !templateId || !import.meta.env.VITE_EMAILJS_PUBLIC_KEY) {
-      setFeedback({
-        type: 'error',
-        text: 'Email service is not configured yet. Add the EmailJS env values to enable inbox delivery.',
-      })
-      return
-    }
 
     try {
       if (clearFeedbackTimeoutRef.current) {
         window.clearTimeout(clearFeedbackTimeoutRef.current)
       }
 
-      await emailjs.send(serviceId, templateId, {
-        from_name: formData.name,
-        from_email: formData.email,
-        reply_to: formData.email,
-        subject: formData.subject || `Message from ${formData.name}`,
-        message: formData.message,
-        to_email: receiverEmail,
+      const response = await fetch('/api/contact', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          subject: formData.subject,
+          message: formData.message,
+          to_email: receiverEmail,
+        }),
       })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.message || 'Failed to send message')
+      }
 
       setFormData({
         name: '',
@@ -81,7 +74,7 @@ const Contact = () => {
     } catch (error) {
       setFeedback({
         type: 'error',
-        text: error?.text || 'Message could not be sent right now. Please try again.',
+        text: error?.message || 'Message could not be sent right now. Please try again.',
       })
     }
   }
